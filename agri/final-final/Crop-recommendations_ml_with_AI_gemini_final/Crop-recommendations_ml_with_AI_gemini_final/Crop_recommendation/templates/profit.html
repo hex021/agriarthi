@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Profit Calculation</title>
+
+<style>
+/* --- SMOOTH TRANSITION STYLES --- */
+body {
+    margin:0;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to right, #2c5364, #203a43, #0f2027);
+    color:white;
+    
+    /* Initial State: Hidden & Lower */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+/* Visible State */
+body.loaded {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.container {
+    width:800px;
+    margin:auto;
+    padding:30px;
+}
+
+.card {
+    background:#1b2b34;
+    padding:30px;
+    border-radius:12px;
+    margin-top:20px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Cost Box Styling */
+.cost-box {
+    border: 1px solid #2cff88;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    background: rgba(44, 255, 136, 0.05);
+}
+
+.cost-box legend {
+    color: #2cff88;
+    font-weight: bold;
+    padding: 0 10px;
+}
+
+input {
+    width:100%;
+    padding:12px;
+    margin:8px 0;
+    border:1px solid #2c3e50;
+    border-radius:6px;
+    background:#253945;
+    color:white;
+    box-sizing: border-box; 
+}
+
+input:focus {
+    outline:none;
+    border-color:#2cff88;
+    background:#2e4655;
+}
+
+button {
+    width:100%;
+    padding:14px;
+    margin-top: 15px;
+    background:#2cff88;
+    color:#0f2027;
+    font-weight:bold;
+    cursor: pointer;
+    border:none;
+    border-radius:6px;
+    font-size:1.1em;
+    transition: 0.2s;
+}
+
+button:hover {
+    background:#23cc6d;
+    transform: translateY(-2px);
+}
+
+h1 {
+    text-align: center;
+    color: #2cff88;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* --- NEW PROFIT/LOSS CLASSES (Fixes the CSS Errors) --- */
+.profit-win {
+    color: #2cff88; /* Green */
+}
+.profit-loss {
+    color: #e74c3c; /* Red */
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>💰 Profit Calculator</h1>
+
+<div class="card">
+<h3>Analysis for: {{ crop }}</h3>
+
+<form action="/profit" method="post">
+
+    <input type="hidden" name="crop" value="{{ crop }}">
+
+    <label>Land & Market Details:</label>
+    
+    <input name="land_size" placeholder="Total Land Size (m²)" value="{{ saved_land_size }}" required type="number" step="any">
+    
+    <input name="market_price" placeholder="Crop Price (₹ per kg)" required type="number" step="any">
+
+    <fieldset class="cost-box">
+        <legend>Expenses (Total Bills)</legend>
+        
+        <input name="fertilizer_cost" placeholder="Total Fertilizer Cost (₹)" required type="number" step="any">
+        <input name="electricity_cost" placeholder="Total Electricity Cost (₹)" required type="number" step="any">
+        <input name="labour_cost" placeholder="Total Labour Cost (₹)" required type="number" step="any">
+        <input name="misc_cost" placeholder="Total Misc. Cost (₹)" required type="number" step="any">
+    </fieldset>
+
+    <button type="submit">Calculate Net Profit</button>
+
+</form>
+</div>
+
+{% if net_profit is defined %}
+<div class="card" style="text-align:center;">
+    <h3>Financial Summary</h3>
+    <p><strong>Expected Yield:</strong> {{ total_yield }} kg</p>
+    <p><strong>Total Revenue:</strong> ₹ {{ revenue }}</p>
+    <p><strong>Total Expenses:</strong> ₹ {{ total_cost }}</p>
+    <hr style="border-color: #555;">
+    
+    <h2 class="{% if net_profit >= 0 %}profit-win{% else %}profit-loss{% endif %}">
+        Net Profit: ₹ {{ net_profit }}
+    </h2>
+    
+    <a href="/" style="color:#aaa; text-decoration:none; display:inline-block; margin-top:10px;">← Back to Prediction</a>
+</div>
+{% endif %}
+
+</div>
+
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        document.body.classList.add('loaded');
+    });
+</script>
+
+</body>
+</html>

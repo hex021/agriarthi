@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Crop & Scheme Advisor</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        /* --- GLOBAL STYLES --- */
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(to right, #2c5364, #203a43, #0f2027); color: white; min-height: 100vh; opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+        body.loaded { opacity: 1; transform: translateY(0); }
+        .container { width: 850px; max-width: 95%; margin: 40px auto; }
+
+        /* --- GOOGLE TRANSLATE --- */
+        #google_translate_element { position: absolute; top: 20px; right: 20px; z-index: 1000; }
+        .goog-te-gadget-simple { background-color: rgba(0,0,0,0.5) !important; border: 1px solid #2cff88 !important; padding: 5px !important; border-radius: 4px !important; }
+        .goog-te-menu-value span { color: white !important; }
+
+        h1 { text-align: center; color: #2cff88; margin-bottom: 30px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .card { background: #1b2b34; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.4); margin-bottom: 25px; border: 1px solid rgba(255, 255, 255, 0.05); }
+        .section-title { color: #2cff88; border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.2em; }
+        
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        label { display: block; margin-bottom: 8px; color: #ccc; font-weight: 500; }
+        input { width: 100%; padding: 12px; border: 1px solid #2c3e50; border-radius: 6px; background: #253945; color: white; box-sizing: border-box; }
+        .btn-predict { width: 100%; padding: 15px; background: #2cff88; color: #0f2027; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-top: 25px; transition: 0.2s; }
+        .btn-predict:hover { background: #23cc6d; transform: translateY(-2px); }
+
+        /* Monitor Grid (NEW) */
+        .monitor-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
+        .monitor-item { text-align: center; font-size: 0.9em; border-right: 1px solid #444; }
+        .monitor-item:last-child { border-right: none; }
+        .monitor-label { display: block; color: #aaa; font-size: 0.8em; }
+        .monitor-val { font-weight: bold; color: #2cff88; font-size: 1.1em; }
+
+        /* Weather */
+        .weather-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-fetch { background: #3498db; color: white; border: none; padding: 0 20px; border-radius: 6px; cursor: pointer; font-weight: bold; white-space: nowrap; }
+        #advisoryCard { display: none; background: rgba(0, 0, 0, 0.3); border-left: 5px solid #3498db; padding: 15px; margin-bottom: 25px; border-radius: 4px; animation: fadeIn 0.5s; }
+        .alert-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 0.85em; font-weight: bold; margin-right: 5px; margin-bottom: 5px; }
+        .alert-rain { background: #3498db; color: white; } .alert-heat { background: #e74c3c; color: white; }
+        .alert-dry { background: #f39c12; color: black; } .alert-safe { background: #2cff88; color: black; }
+        .advice-text { margin-top: 10px; font-size: 1.1em; color: #ecf0f1; font-style: italic; }
+
+        /* Result */
+        .result-box { text-align: center; border-top: 1px solid #444; padding-top: 20px; animation: fadeIn 0.8s ease-in-out; position: relative; }
+        .crop-name { font-size: 3em; color: #2cff88; margin: 10px 0; }
+        
+        /* Voice Controls */
+        .voice-controls { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .lang-select { background: #1b2b34; color: #2cff88; border: 1px solid #2cff88; padding: 8px; border-radius: 5px; cursor: pointer; font-weight: bold; outline: none; }
+        .btn-voice { background: transparent; border: 2px solid #2cff88; color: #2cff88; border-radius: 50px; padding: 8px 20px; cursor: pointer; font-size: 1em; transition: all 0.3s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-voice:hover { background: #2cff88; color: #000; }
+        .speaking { animation: pulse 1.5s infinite; background: #2cff88; color: #000; }
+
+        .advisory-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 25px 0; text-align: left; }
+        .advisory-item { background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); transition: transform 0.2s; }
+        .advisory-item:hover { transform: translateY(-3px); background: rgba(255, 255, 255, 0.08); border-color: #2cff88; }
+        .advisory-icon { font-size: 1.5em; margin-bottom: 5px; }
+        .advisory-title { color: #2cff88; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; font-size: 0.9em; }
+        .advisory-desc { font-size: 0.9em; color: #ddd; line-height: 1.4; }
+
+        #schemeResults { margin-top: 30px; }
+        .scheme-result-item { background: rgba(52, 152, 219, 0.1); border: 1px solid #3498db; padding: 20px; border-radius: 10px; text-align: left; margin: 20px auto; max-width: 700px; }
+        .scheme-result-item h3 { color: #3498db; margin-top: 0; }
+        .scheme-result-item a { color: #3498db; font-weight: bold; text-decoration: none; }
+
+        .action-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 25px; }
+        .btn-profit { background: #ffcc00; color: #000; padding: 14px 30px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 1em; box-shadow: 0 4px 15px rgba(255, 204, 0, 0.3); transition: 0.3s; cursor: pointer; }
+        .btn-profit:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255, 204, 0, 0.5); }
+        .btn-pdf { background: #e74c3c; color: white; padding: 14px 30px; border:none; border-radius: 50px; font-weight: bold; font-size: 1em; cursor: pointer; box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3); transition: 0.3s; }
+        .btn-pdf:hover { transform: translateY(-3px); background: #c0392b; }
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(44, 255, 136, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(44, 255, 136, 0); } 100% { box-shadow: 0 0 0 0 rgba(44, 255, 136, 0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media print {
+            body { background: white; color: black; }
+            .card { box-shadow: none; border: 1px solid #ccc; background: white; color: black; }
+            .form-grid, .btn-predict, .btn-fetch, .weather-group, .voice-controls, .action-buttons, #google_translate_element { display: none !important; }
+            .crop-name { color: #000; }
+            .section-title { color: #000; border-bottom: 1px solid #000; }
+            h1 { color: #000; text-shadow: none; }
+            .advisory-item, .scheme-result-item { border: 1px solid #000; background: #f9f9f9; color: black; }
+            .advisory-desc, .scheme-result-item p { color: #333; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="google_translate_element"></div>
+
+<div class="container">
+    <h1>🌱 Smart Crop & Scheme Advisor</h1>
+
+    <div class="card" id="inputCard">
+        <div class="section-title">📍 Localized Weather Intelligence</div>
+        <div class="weather-group">
+            <input type="text" id="cityInput" placeholder="Enter Village/City Name (e.g. Nagpur)">
+            <button type="button" class="btn-fetch" onclick="fetchWeather()">Get Forecast ☁️</button>
+        </div>
+        <div id="advisoryCard">
+            <div id="alertContainer"></div>
+            <div id="weatherStats" style="font-size: 0.9em; color: #aaa; margin-top: 5px;"></div>
+            <div class="advice-text" id="adviceText"></div>
+        </div>
+        <form action="/predict" method="post">
+            <div class="section-title">1. Crop Input Data</div>
+            <div class="form-grid">
+                <div><label>Nitrogen (N)</label><input type="number" step="any" name="Nitrogen" value="{{ request.form.get('Nitrogen', '') }}" required></div>
+                <div><label>Phosphorus (P)</label><input type="number" step="any" name="Phosporus" value="{{ request.form.get('Phosporus', '') }}" required></div>
+                <div><label>Potassium (K)</label><input type="number" step="any" name="Potassium" value="{{ request.form.get('Potassium', '') }}" required></div>
+                <div><label>Rainfall (mm) *</label><input type="number" step="any" name="Rainfall" id="rainfallInput" value="{{ request.form.get('Rainfall', '') }}" required><small style="color:#aaa; font-size:0.8em;">* Annual Average</small></div>
+            </div>
+            <br>
+            
+            <div class="section-title">2. Sensor Data (Live)</div>
+            <p style="color:#aaa; font-size:0.9em;">Temperature, Humidity, and pH are read automatically from <code>data/sensor_data.json</code>.</p>
+            
+            <br>
+            <div class="section-title">3. Farmer Profile</div>
+            <div class="form-grid">
+                <div><label>Land Size (m²)</label><input type="number" step="any" name="LandSize" id="schemeLand" value="{{ request.form.get('LandSize', '') }}" required></div>
+                <div><label>Annual Income (₹)</label><input type="number" step="any" name="Income" id="schemeIncome" value="{{ request.form.get('Income', '') }}" required></div>
+            </div>
+            <button type="submit" class="btn-predict">Analyze Soil & Check Eligibility</button>
+        </form>
+    </div>
+
+    {% if result %}
+    <div class="card" id="result-section">
+        <a href="/reset" style="float:right; color:#aaa; font-size:0.8em; text-decoration:none;">🔄 Start New Prediction</a>
+
+        <div class="result-box">
+            
+            <div class="voice-controls">
+                <select id="voiceLang" class="lang-select">
+                    <option value="en-IN">English (India)</option>
+                    <option value="gu-IN">Gujarati (ગુજરાતી)</option>
+                    <option value="hi-IN">Hindi (हिंदी)</option>
+                    <option value="mr-IN">Marathi (मराठी)</option>
+                </select>
+                <button class="btn-voice" onclick="playAudio()">🔊 Listen (Advice)</button>
+            </div>
+            <audio id="audioPlayer" style="display:none;"></audio>
+            <p id="loadingMsg" style="display:none; color:#2cff88; font-size:0.9em; margin-top:5px;">⏳ Generating Audio...</p>
+
+            <h3>Recommended Crop:</h3>
+            <h2 class="crop-name">{{ result }}</h2>
+            
+            {% if explanation %}
+            <p id="explanationText" style="color: #ccc; max-width: 600px; margin: 0 auto; line-height:1.5;">{{ explanation }}</p>
+            {% endif %}
+
+            {% if values %}
+            <div style="margin: 20px 0;">
+                <h4 style="color:#2cff88; margin-bottom:10px;">📊 Live Sensor & Input Monitor</h4>
+                <div class="monitor-grid">
+                    <div class="monitor-item"><span class="monitor-label">Temp</span><span class="monitor-val">{{ values.Temperature }}°C</span></div>
+                    <div class="monitor-item"><span class="monitor-label">Humidity</span><span class="monitor-val">{{ values.Humidity }}%</span></div>
+                    <div class="monitor-item"><span class="monitor-label">pH</span><span class="monitor-val">{{ values.pH }}</span></div>
+                    <div class="monitor-item"><span class="monitor-label">Rainfall</span><span class="monitor-val">{{ values.Rainfall }}mm</span></div>
+                    <div class="monitor-item" style="border-right:1px solid #444;"><span class="monitor-label">N</span><span class="monitor-val">{{ values.Nitrogen }}</span></div>
+                    <div class="monitor-item" style="border-right:1px solid #444;"><span class="monitor-label">P</span><span class="monitor-val">{{ values.Phosporus }}</span></div>
+                    <div class="monitor-item"><span class="monitor-label">K</span><span class="monitor-val">{{ values.Potassium }}</span></div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if advisory %}
+            <div class="advisory-grid">
+                <div class="advisory-item"><div class="advisory-icon">🌱</div><div class="advisory-title">Sowing</div><div class="advisory-desc" id="adv-sowing">{{ advisory.sowing }}</div></div>
+                <div class="advisory-item"><div class="advisory-icon">🧪</div><div class="advisory-title">Fertilizer</div><div class="advisory-desc" id="adv-fert">{{ advisory.fertilizer }}</div></div>
+                <div class="advisory-item"><div class="advisory-icon">💧</div><div class="advisory-title">Irrigation</div><div class="advisory-desc" id="adv-water">{{ advisory.irrigation }}</div></div>
+                <div class="advisory-item"><div class="advisory-icon">🌾</div><div class="advisory-title">Harvesting</div><div class="advisory-desc" id="adv-harvest">{{ advisory.harvest }}</div></div>
+            </div>
+            {% endif %}
+
+            <div id="schemeResults"></div>
+
+            <div class="action-buttons">
+                <a href="/profit-page?crop={{ result }}&land_size={{ request.form.get('LandSize', '') }}" 
+                   class="btn-profit" onclick="smoothNavigate(event, this.href)">
+                    Calculate Profit ➔
+                </a>
+                
+                <button onclick="downloadPDF()" class="btn-pdf">📄 Download Report</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script type="text/javascript">
+function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'en', 
+    includedLanguages: 'en,gu,hi,mr,pa,ta,te',
+    layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+  }, 'google_translate_element');
+}
+</script>
+<script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+<script>
+    // --- 1. SMOOTH TRANSITION ---
+    window.addEventListener('DOMContentLoaded', () => { document.body.classList.add('loaded'); });
+    function smoothNavigate(e, url) {
+        e.preventDefault(); document.body.classList.remove('loaded');
+        setTimeout(() => { window.location.href = url; }, 500);
+    }
+
+    // --- 2. FIXED PDF GENERATION ---
+    function downloadPDF() {
+        const cropName = document.querySelector('.crop-name').innerText;
+        const schemeDiv = document.querySelector('.scheme-result-item');
+        const schemeText = schemeDiv ? schemeDiv.innerText : "No Scheme Selected";
+        
+        const getAdv = (sel) => document.querySelector(sel) ? document.querySelector(sel).innerText : "N/A";
+        const sowing = getAdv('#adv-sowing');
+        const fert = getAdv('#adv-fert');
+        const water = getAdv('#adv-water');
+        const harvest = getAdv('#adv-harvest');
+
+        // Create Clean HTML for PDF
+        var content = `
+            <div style="font-family: Helvetica, Arial, sans-serif; padding: 30px; color: #333;">
+                <h1 style="text-align:center; color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 10px;">Farmer Advisory Report</h1>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e8f8f5; border-radius: 8px;">
+                    <h2 style="color: #16a085; margin: 0;">Recommended Crop: ${cropName}</h2>
+                </div>
+
+                <h3 style="color: #2980b9; margin-top: 30px;">🚜 Crop Lifecycle Advisory</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>🌱 Sowing:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${sowing}</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>🧪 Fertilizer:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${fert}</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>💧 Irrigation:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${water}</td></tr>
+                    <tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>🌾 Harvesting:</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">${harvest}</td></tr>
+                </table>
+
+                <h3 style="color: #8e44ad; margin-top: 30px;">🏛️ Government Scheme</h3>
+                <div style="border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
+                    ${schemeText.replace(/\n/g, '<br>')}
+                </div>
+                
+                <div style="margin-top: 50px; text-align: center; font-size: 0.8em; color: #999;">
+                    Generated by Smart Crop Advisor
+                </div>
+            </div>
+        `;
+
+        const opt = {
+            margin: 0.5,
+            filename: 'Crop_Advisory.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        html2pdf().from(content).set(opt).save();
+    }
+
+    // --- 3. SERVER-SIDE AUDIO (NEW LOGIC) ---
+    async function playAudio() {
+        const loader = document.getElementById('loadingMsg');
+        const player = document.getElementById('audioPlayer');
+        const btn = document.querySelector('.btn-voice');
+        const langCode = document.getElementById('voiceLang').value;
+        
+        // Construct the text to send for speech
+        // We use the Gemini explanation mainly, plus crop name
+        const crop = document.querySelector('.crop-name').innerText;
+        const explanation = document.getElementById('explanationText') ? document.getElementById('explanationText').innerText : "";
+        
+        const fullText = `Recommendation: ${crop}. ${explanation}`;
+
+        loader.style.display = 'block';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/get_audio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: fullText, lang: langCode })
+            });
+
+            const data = await response.json();
+            
+            if(data.audio_url) {
+                // Add a unique timestamp to force browser to reload the audio file
+                player.src = data.audio_url + "?t=" + new Date().getTime();
+                player.play();
+                btn.classList.add('speaking');
+                
+                player.onended = function() {
+                    btn.classList.remove('speaking');
+                };
+            } else {
+                alert("Audio generation failed.");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error connecting to server for audio.");
+        } finally {
+            loader.style.display = 'none';
+            btn.disabled = false;
+        }
+    }
+
+    // --- 4. WEATHER FETCH ---
+    async function fetchWeather() {
+        const city = document.getElementById('cityInput').value;
+        if(!city) { alert("Please enter city!"); return; }
+        const btn = document.querySelector('.btn-fetch'); btn.textContent = "Analyzing..."; btn.disabled = true;
+        try {
+            const formData = new FormData(); formData.append('city', city);
+            const response = await fetch('/get_weather', { method: 'POST', body: formData });
+            const data = await response.json();
+            if (data.error) { alert("Error: " + data.error); } 
+            else {
+                const adv = data.Advisory;
+                const card = document.getElementById('advisoryCard');
+                const alertContainer = document.getElementById('alertContainer');
+                card.style.display = "block"; alertContainer.innerHTML = "";
+                if (adv.alerts.length > 0) {
+                    adv.alerts.forEach(alertMsg => {
+                        let className = "alert-safe";
+                        if(alertMsg.includes("Rain") || alertMsg.includes("Thunderstorm")) className = "alert-rain";
+                        if(alertMsg.includes("Heat")) className = "alert-heat";
+                        if(alertMsg.includes("Dry")) className = "alert-dry";
+                        alertContainer.innerHTML += `<span class="alert-badge ${className}">${alertMsg}</span>`;
+                    });
+                } else { alertContainer.innerHTML = `<span class="alert-badge alert-safe">✅ Favorable Conditions</span>`; }
+                document.getElementById('weatherStats').innerHTML = `3-Day Max Temp: ${adv.max_temp_3days}°C | Rain Prob: ${adv.rain_prob}%`;
+                document.getElementById('adviceText').innerText = adv.advice;
+            }
+        } catch (error) { console.error(error); alert("Failed to fetch forecast."); } 
+        finally { btn.textContent = "Get Forecast ☁️"; btn.disabled = false; }
+    }
+
+    // --- 5. SCHEME LOGIC ---
+    const schemesData = [
+      { "id": 1, "scheme_name": "PM-KISAN", "description": "Income Support: ₹6000 per year.", "documents": "Aadhaar; Bank Passbook", "constraints": { "max_land_sqm": 5000, "max_income": 100000 }, "apply_link": "https://pmkisan.gov.in/" },
+      { "id": 2, "scheme_name": "Kisan Credit Card", "description": "Credit Limit up to ₹5 Lakh.", "documents": "Land Docs; Aadhaar", "constraints": { "max_land_sqm": 11250, "max_income": 150000 }, "apply_link": "https://pmkisan.gov.in/Kcc/" },
+      { "id": 3, "scheme_name": "PM Fasal Bima Yojana", "description": "Crop Insurance against failure.", "documents": "Sowing Cert; LPC", "constraints": { "max_land_sqm": 17500, "max_income": 200000 }, "apply_link": "https://pmfby.gov.in/" },
+      { "id": 4, "scheme_name": "PM-KMY (Pension)", "description": "Pension of ₹3000/month.", "documents": "Aadhaar; Savings Bank", "constraints": { "max_land_sqm": 23750, "max_income": 250000 }, "apply_link": "https://maandhan.in/" },
+      { "id": 5, "scheme_name": "PM-KUSUM (Solar)", "description": "60% Subsidy for Solar Pumps.", "documents": "Land ownership; Aadhaar", "constraints": { "max_land_sqm": 30000, "max_income": 300000 }, "apply_link": "https://mnre.gov.in/solar/schemes/pm-kusum/" },
+      { "id": 6, "scheme_name": "Agri Infra Fund", "description": "Interest Subvention: 3% p.a.", "documents": "DPR; KYC", "constraints": { "max_land_sqm": 36250, "max_income": 350000 }, "apply_link": "https://agriinfra.dac.gov.in/" },
+      { "id": 7, "scheme_name": "Gujarat Tractor Subsidy", "description": "Tractor Purchase Assistance.", "documents": "7/12 Land extracts", "constraints": { "max_land_sqm": 42500, "max_income": 400000 }, "apply_link": "https://ikhedut.gujarat.gov.in/" },
+      { "id": 8, "scheme_name": "Kisan Parivahan Yojana", "description": "Vehicle Subsidy.", "documents": "Driving License; RC", "constraints": { "max_land_sqm": 48750, "max_income": 450000 }, "apply_link": "https://ikhedut.gujarat.gov.in/" },
+      { "id": 9, "scheme_name": "Fertilizer Subsidy", "description": "Subsidized DAP/Urea.", "documents": "Biometric Auth", "constraints": { "max_land_sqm": 55000, "max_income": 500000 }, "apply_link": "https://fert.nic.in/" },
+      { "id": 10, "scheme_name": "ITC e-Choupal", "description": "Direct Sale & Weather Info.", "documents": "Registration", "constraints": { "max_land_sqm": 61250, "max_income": 550000 }, "apply_link": "https://www.itcportal.com/" },
+      { "id": 11, "scheme_name": "Bayer PLUS Rewards", "description": "Cashback on seeds.", "documents": "Invoices", "constraints": { "max_land_sqm": 67500, "max_income": 600000 }, "apply_link": "https://www.plusrewards.bayer.in/" },
+      { "id": 12, "scheme_name": "Reliance Foundation", "description": "Water Harvesting Support.", "documents": "Proposal", "constraints": { "max_land_sqm": 73750, "max_income": 650000 }, "apply_link": "https://www.reliancefoundation.org/" },
+      { "id": 13, "scheme_name": "DeHaat Services", "description": "Seeds to Market Support.", "documents": "KYC App", "constraints": { "max_land_sqm": 80000, "max_income": 700000 }, "apply_link": "https://agrevolution.in/" },
+      { "id": 14, "scheme_name": "AgroStar Saathi", "description": "Credit Line.", "documents": "KYC", "constraints": { "max_land_sqm": 86250, "max_income": 750000 }, "apply_link": "https://www.agrostar.in/" }
+    ];
+
+    function findBestScheme() {
+        const land = parseFloat(document.getElementById('schemeLand').value);
+        const income = parseFloat(document.getElementById('schemeIncome').value);
+        const resultsDiv = document.getElementById('schemeResults');
+        if (isNaN(land) || isNaN(income)) return;
+        resultsDiv.innerHTML = "<p style='text-align: center; color:#aaa;'>Analyzing eligibility...</p>";
+        try {
+            const sortedSchemes = [...schemesData].sort((a, b) => {
+                const scoreA = (Math.abs(land - a.constraints.max_land_sqm)/a.constraints.max_land_sqm) + (Math.abs(income - a.constraints.max_income)/a.constraints.max_income);
+                const scoreB = (Math.abs(land - b.constraints.max_land_sqm)/b.constraints.max_land_sqm) + (Math.abs(income - b.constraints.max_income)/b.constraints.max_income);
+                return scoreA - scoreB;
+            });
+            const bestScheme = sortedSchemes[0];
+            if (bestScheme) {
+                const landDiff = (land - bestScheme.constraints.max_land_sqm).toFixed(1);
+                const incomeDiff = (income - bestScheme.constraints.max_income);
+                resultsDiv.innerHTML = `
+                    <div class="scheme-result-item">
+                        <div style="float:right; background:#2cff88; color:black; padding:2px 10px; border-radius:10px; font-size:0.8em; font-weight:bold;">Best Match</div>
+                        <h3>🏛️ ${bestScheme.scheme_name}</h3>
+                        <p>${bestScheme.description}</p>
+                        <hr style="border: 0; border-top: 1px solid rgba(52, 152, 219, 0.3);">
+                        <p style="color:#ddd;"><strong>Required Documents 📄:</strong></p>
+                        <p style="color:#aaa; font-size:0.95em;">${bestScheme.documents}</p>
+                        <br>
+                        <a href="${bestScheme.apply_link}" target="_blank">Apply Here &rarr;</a>
+                    </div>
+                `;
+            } else { resultsDiv.innerHTML = "<p style='text-align: center;'>No suitable schemes found.</p>"; }
+        } catch (error) { console.error("Error:", error); }
+    }
+
+    const recommendedCrop = "{{ result if result else '' }}";
+    window.onload = function() {
+        if (recommendedCrop.trim() !== "") {
+            findBestScheme();
+            var el = document.getElementById("result-section");
+            if(el) el.scrollIntoView({ behavior: "smooth" });
+        }
+    };
+</script>
+
+</body>
+</html>
